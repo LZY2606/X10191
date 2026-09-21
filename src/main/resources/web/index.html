@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>行址罗盘</title>
+<style>
+:root{--bg:#0f1420;--panel:#171e2e;--panel2:#1d2740;--ink:#e8edf7;--muted:#8b97ad;--accent:#5ad1a0;--accent2:#6aa6ff;--warn:#e8b04b;--err:#e06a6a;--line:#26314a}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--ink)}
+header{padding:18px 24px;border-bottom:1px solid var(--line);display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+h1{font-size:22px;margin:0;letter-spacing:2px}
+h1 span{color:var(--accent)}
+.sub{color:var(--muted);font-size:12px}
+main{display:grid;grid-template-columns:330px 1fr;gap:16px;padding:16px 24px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
+.card h2{font-size:14px;margin:0 0 10px;color:var(--accent2);display:flex;justify-content:space-between}
+button{background:var(--accent2);color:#08111f;border:0;border-radius:6px;padding:6px 12px;font-weight:600;cursor:pointer}
+button.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+button.small{padding:3px 8px;font-size:12px}
+input,select,textarea{width:100%;background:#0d1322;border:1px solid var(--line);color:var(--ink);border-radius:6px;padding:7px 9px;font-family:ui-monospace,Menlo,monospace;font-size:12px}
+textarea{min-height:110px;resize:vertical}
+label{display:block;font-size:12px;color:var(--muted);margin:8px 0 3px}
+.row{display:flex;gap:8px;align-items:center}
+.mono{font-family:ui-monospace,Menlo,monospace}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th,td{text-align:left;padding:4px 8px;border-bottom:1px solid var(--line)}
+th{color:var(--muted);font-weight:500;position:sticky;top:0;background:var(--panel)}
+.scroll{max-height:300px;overflow:auto;border:1px solid var(--line);border-radius:8px}
+.tag{display:inline-block;padding:1px 7px;border-radius:10px;font-size:11px;background:#22304d;color:var(--accent2)}
+.tag.exact{background:#173a2c;color:var(--accent)}.tag.degraded{background:#3f331b;color:var(--warn)}.tag.partial{background:#3f331b;color:var(--warn)}.tag.line-only{background:#25304a;color:#a9b9d6}
+.muted{color:var(--muted)}
+.addr{color:var(--accent)}
+.cand{border:1px solid var(--line);border-radius:8px;padding:10px;margin-bottom:10px;background:var(--panel2)}
+.cand .head{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.frames{margin:8px 0 0 14px;border-left:2px solid var(--line);padding-left:12px}
+.frame{margin:4px 0}
+.bar{position:relative;height:26px;background:#0d1322;border-radius:5px;margin:4px 0;overflow:hidden}
+.seg{position:absolute;top:3px;bottom:3px;background:linear-gradient(90deg,#2c5d8f,#6aa6ff);border-radius:3px;font-size:10px;color:#cfe2ff;padding:2px 6px;white-space:nowrap}
+.seg.zero{background:#5a4a23;color:#ffd98a}
+.seg.seq{background:linear-gradient(90deg,#23604a,#5ad1a0)}
+.note{font-size:12px;color:var(--warn);margin:2px 0}
+.issue-error{color:var(--err)}.issue-warn{color:var(--warn)}
+.tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.tabs button{background:var(--panel2);color:var(--muted)}
+.tabs button.on{background:var(--accent2);color:#08111f}
+.kv{display:grid;grid-template-columns:110px 1fr;gap:2px 10px;font-size:12px}
+.kv div:nth-child(odd){color:var(--muted)}
+.badge{font-size:11px;padding:1px 6px;border-radius:4px;background:#22304d}
+.ok{color:var(--accent)}
+</style>
+</head>
+<body>
+<header>
+  <h1>行址罗盘 <span>Line–Address Compass</span></h1>
+  <div class="sub">本地 ELF + DWARF 解析 · 不调用系统调试器 · 版本与加载快照固定</div>
+</header>
+<main>
+  <div id="left">
+    <div class="card">
+      <h2>版本 / 调试文件</h2>
+      <div class="row">
+        <input id="newVerLabel" placeholder="新版本标签，如 build-2026-09-22"/>
+        <button onclick="createVersion()">新建版本</button>
+      </div>
+      <label>当前版本</label>
+      <select id="verSelect" onchange="loadVersion()"></select>
+      <label>导入 ELF / 分离调试文件 / .dwo（形成新版本，不改旧崩溃）</label>
+      <input type="file" id="fileInput"/>
+      <label class="row" style="gap:8px"><span style="flex:1">角色</span>
+        <select id="roleSelect" style="width:120px"><option value="main">main/可执行</option><option value="dwo">.dwo 分离调试</option></select>
+      </label>
+      <div class="row" style="margin-top:8px"><button onclick="uploadFile()">导入并解析</button><span id="importMsg" class="muted"></span></div>
+    </div>
+
+    <div class="card">
+      <h2>崩溃记录 &amp; 模块加载快照</h2>
+      <div class="row">
+        <input id="crashLabel" placeholder="崩溃标签，如 crash#7782"/>
+        <button onclick="createCrash()">新建崩溃</button>
+      </div>
+      <label>崩溃（固定其版本）</label>
+      <select id="crashSelect"></select>
+      <div class="kv" style="margin-top:6px"><div>runtime base</div><div><input id="rtBase" placeholder="0x5555..."/></div>
+        <div>显式 bias(可选)</div><div><input id="exBias" placeholder="留空=runtime-link"/></div>
+        <div>模块名</div><div><input id="modName" value="main"/></div></div>
+      <div class="row" style="margin-top:8px"><button onclick="addLoad()">固定加载快照（新代次）</button></div>
+      <div id="loads" style="margin-top:8px"></div>
+    </div>
+
+    <div class="card">
+      <h2>地址查询</h2>
+      <div class="row">
+        <select id="mode" style="width:130px"><option value="runtime">运行时地址</option><option value="relative">相对地址</option></select>
+        <select id="genSelect" style="width:130px"><option value="">所有加载代次</option></select>
+      </div>
+      <label>单个地址</label>
+      <div class="row"><input id="oneAddr" placeholder="0x55555555..."/><button onclick="queryOne()">解析</button></div>
+      <label>批量粘贴栈地址（换行/逗号/空格分隔）</label>
+      <textarea id="batchAddrs" placeholder="0x555555554321&#10;0x7ffff7a12340&#10;..."></textarea>
+      <div class="row" style="margin-top:6px"><button onclick="queryBatch()">批量解析</button><button class="ghost" onclick="document.getElementById('batchAddrs').value=''">清空</button></div>
+    </div>
+  </div>
+
+  <div id="right">
+    <div class="card">
+      <h2>查询结果 <span id="resMeta" class="muted"></span></h2>
+      <div id="results"><div class="muted">导入调试文件后，粘贴运行时地址开始解析。</div></div>
+    </div>
+
+    <div class="card">
+      <div class="tabs">
+        <button class="on" data-tab="map" onclick="tab('map')">Section 地图</button>
+        <button data-tab="ranges" onclick="tab('ranges')">地址范围</button>
+        <button data-tab="line" onclick="tab('line')">Line Program</button>
+        <button data-tab="inline" onclick="tab('inline')">内联树</button>
+        <button data-tab="issues" onclick="tab('issues')">解析告警</button>
+      </div>
+      <div id="tab-map"></div>
+      <div id="tab-ranges" hidden></div>
+      <div id="tab-line" hidden></div>
+      <div id="tab-inline" hidden></div>
+      <div id="tab-issues" hidden></div>
+    </div>
+  </div>
+</main>
+<script src="/static/app.js"></script>
+</body>
+</html>
