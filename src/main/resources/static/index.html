@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>行址罗盘</title>
+<style>
+:root{--bg:#0e1116;--panel:#171c24;--panel2:#1d232d;--line:#2a3340;--fg:#e6ebf2;--mut:#93a0b3;--acc:#5ab0ff;--ok:#4cc38a;--warn:#e8b04b;--err:#f07a76}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 -apple-system,"PingFang SC","Microsoft YaHei",monospace}
+header{padding:14px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+h1{font-size:18px;margin:0;letter-spacing:2px}
+h1 .sub{color:var(--mut);font-weight:400;font-size:12px;margin-left:10px}
+.wrap{padding:16px 20px;display:grid;grid-template-columns:300px 1fr;gap:16px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px}
+.panel h2{font-size:13px;margin:0 0 10px;color:var(--acc);text-transform:uppercase;letter-spacing:1px}
+button{background:#243040;color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:6px 12px;cursor:pointer;font-size:13px}
+button:hover{border-color:var(--acc)}
+button.primary{background:var(--acc);color:#08121d;border-color:var(--acc);font-weight:600}
+input,textarea,select{background:#0e141b;border:1px solid var(--line);color:var(--fg);border-radius:6px;padding:7px 9px;font:inherit;width:100%}
+textarea{min-height:120px;resize:vertical}
+.row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.row>*{flex:1}
+.row label{flex:0 0 74px;color:var(--mut)}
+.muted{color:var(--mut);font-size:12px}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--mut);font-weight:600;position:sticky;top:0;background:var(--panel)}
+tr:hover td{background:#1b232e}
+.tag{display:inline-block;padding:1px 7px;border-radius:10px;font-size:11px;border:1px solid var(--line)}
+.tag.ok{color:var(--ok);border-color:var(--ok)}
+.tag.warn{color:var(--warn);border-color:var(--warn)}
+.tag.err{color:var(--err);border-color:var(--err)}
+.tag.acc{color:var(--acc);border-color:var(--acc)}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.card{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px}
+.card .big{font-size:15px;font-weight:600}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.tabs button.active{background:var(--acc);color:#08121d}
+pre{background:#0b0f14;border:1px solid var(--line);border-radius:6px;padding:8px;overflow:auto;max-height:320px;font-size:12px}
+.sectionbar{height:18px;background:linear-gradient(90deg,#2d6cdf,#5ab0ff);border-radius:3px;margin:3px 0;position:relative}
+.sectionbar.miss{background:repeating-linear-gradient(45deg,#3a2c2c,#3a2c2c 5px,#2a2020 5px,#2a2020 10px)}
+.swatch{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px}
+.tree{font-size:13px}
+.tree .node{padding:3px 0 3px 16px;border-left:1px dashed var(--line);margin-left:6px}
+.scroll{max-height:520px;overflow:auto}
+.flex{display:flex;gap:16px;flex-wrap:wrap}
+.flex>*{flex:1;min-width:280px}
+.small{font-size:11.5px}
+.right{margin-left:auto}
+.toast{position:fixed;bottom:20px;right:20px;background:var(--panel2);border:1px solid var(--acc);padding:10px 14px;border-radius:8px;display:none}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+</style>
+</head>
+<body>
+<header>
+  <h1>行址罗盘 <span class="sub">ELF · DWARF4/5 · 本地解析 · 不调用 addr2line</span></h1>
+  <span class="right muted" id="health"></span>
+</header>
+<div class="wrap">
+  <div class="panel" style="height:fit-content">
+    <h2>调试文件版本</h2>
+    <div class="row">
+      <input id="label" placeholder="版本标签" value="snapshot"/>
+    </div>
+    <div class="row">
+      <input id="file" type="file"/>
+    </div>
+    <div class="row">
+      <button class="primary" id="importBtn">导入新版本</button>
+    </div>
+    <div id="versionList" class="scroll"></div>
+    <hr style="border-color:var(--line);margin:12px 0"/>
+    <h2>固定加载快照</h2>
+    <div class="row"><label>load bias</label><input id="bias" value="0x0"/></div>
+    <div class="row"><label>module</label><input id="modbase" placeholder="可选 base"/></div>
+    <div class="row"><label>备注</label><input id="note" value="crash run"/></div>
+    <button class="primary" id="snapBtn" style="width:100%">固定当前模块快照</button>
+    <div id="snapList" class="small" style="margin-top:8px"></div>
+  </div>
+  <div>
+    <div class="panel">
+      <h2>批量栈地址</h2>
+      <textarea id="batch" placeholder="粘贴整段栈，自动提取十六进制地址，例如:&#10;#0 pc 0x0000000000001234 /usr/bin/app (foo+0x18)&#10;#1 0x555555555040"></textarea>
+      <div class="row" style="margin-top:8px">
+        <button class="primary" id="batchBtn">用选中快照解析</button>
+        <select id="snapSel"></select>
+      </div>
+      <div class="row">
+        <input id="singleAddr" placeholder="单个地址 0x..."/>
+        <input id="singleBias" value="0x0" style="max-width:140px"/>
+        <button id="singleBtn">单地址解析</button>
+      </div>
+    </div>
+    <div id="results" style="margin-top:16px"></div>
+    <div class="panel" style="margin-top:16px">
+      <div class="tabs" id="tabs">
+        <button data-tab="sections" class="active">Section 地图</button>
+        <button data-tab="ranges">地址范围</button>
+        <button data-tab="sequences">Line Program</button>
+        <button data-tab="inlines">内联树</button>
+        <button data-tab="cus">编译单元</button>
+      </div>
+      <div id="tabBody" class="scroll"></div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script src="app.js"></script>
+</body>
+</html>
