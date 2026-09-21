@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>行址罗盘</title>
+<style>
+  :root { --bg:#0f1420; --panel:#171e2e; --line:#28324a; --txt:#dce4f2; --muted:#8a97b3;
+          --accent:#5aa7ff; --good:#4cc38a; --warn:#e0a94e; --bad:#e06b6b; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:13px/1.5 -apple-system,"PingFang SC","Microsoft Yahei",monospace,sans-serif;
+         background:var(--bg); color:var(--txt); }
+  header { padding:14px 20px; border-bottom:1px solid var(--line); display:flex; align-items:baseline; gap:14px; }
+  header h1 { font-size:18px; margin:0; color:var(--accent); letter-spacing:2px; }
+  header .sub { color:var(--muted); font-size:12px; }
+  .wrap { display:grid; grid-template-columns:300px 1fr; gap:0; min-height:calc(100vh - 52px); }
+  .side { border-right:1px solid var(--line); padding:14px; background:var(--panel); overflow:auto; }
+  .main { padding:16px 20px; overflow:auto; }
+  section { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:12px 14px; margin-bottom:14px; }
+  section h2 { font-size:13px; margin:0 0 10px; color:var(--accent); text-transform:uppercase; letter-spacing:1px; }
+  label { display:block; color:var(--muted); margin:6px 0 2px; font-size:12px; }
+  input,select,textarea,button { font:inherit; background:#0e1422; color:var(--txt);
+      border:1px solid var(--line); border-radius:5px; padding:6px 8px; width:100%; }
+  textarea { min-height:120px; resize:vertical; }
+  button { cursor:pointer; width:auto; background:#1d2a44; margin-top:8px; }
+  button:hover { border-color:var(--accent); }
+  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .row > * { flex:1; }
+  .row button { flex:0 0 auto; }
+  table { width:100%; border-collapse:collapse; font-size:12px; }
+  th,td { text-align:left; padding:4px 8px; border-bottom:1px solid var(--line); white-space:nowrap; }
+  th { color:var(--muted); position:sticky; top:0; background:var(--panel); }
+  td.wrapcell { white-space:normal; }
+  .tag { display:inline-block; padding:0 6px; border-radius:4px; font-size:11px; border:1px solid var(--line); }
+  .tag.good { color:var(--good); border-color:var(--good); }
+  .tag.warn { color:var(--warn); border-color:var(--warn); }
+  .tag.bad  { color:var(--bad); border-color:var(--bad); }
+  .secbar { height:18px; border-radius:3px; margin:2px 0; display:flex; align-items:center;
+            padding:0 6px; font-size:11px; overflow:hidden; border:1px solid #0000; }
+  .alloc { background:#1f3a5f; } .debug { background:#332a4a; } .zero { background:#243047; color:var(--muted); }
+  .mono { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+  .chain { margin:4px 0 4px 12px; border-left:2px solid var(--line); padding-left:10px; }
+  .frame { padding:2px 0; }
+  .muted { color:var(--muted); } .good { color:var(--good); } .warn{ color:var(--warn);} .bad{color:var(--bad);}
+  .clickable { cursor:pointer; } .clickable:hover { color:var(--accent); }
+  .seq-block { margin:8px 0; border:1px solid var(--line); border-radius:6px; overflow:hidden; }
+  .seq-head { background:#1d2740; padding:4px 8px; }
+  .rowstate-end { color:var(--warn); }
+  .pill { font-size:11px; padding:0 6px; border-radius:10px; background:#1d2a44; margin-right:4px; }
+  .vlist div { padding:6px 8px; border-radius:5px; cursor:pointer; }
+  .vlist div.active, .vlist div:hover { background:#1d2a44; }
+  details summary { cursor:pointer; color:var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1>行址罗盘</h1>
+  <span class="sub">本地 ELF / DWARF 地址归属 · 行表 · 内联链 · load bias · 无系统调试器</span>
+</header>
+<div class="wrap">
+  <div class="side">
+    <section>
+      <h2>导入调试文件</h2>
+      <input id="upFile" type="file"/>
+      <label>标签</label><input id="upLabel" placeholder="例如 release-2026-09"/>
+      <label>可选 .dwo / split companion</label>
+      <input id="upDwo" type="file"/>
+      <button onclick="uploadFile()">导入并生成版本</button>
+      <div id="upMsg" class="muted" style="margin-top:6px"></div>
+    </section>
+    <section>
+      <h2>版本（不可变）</h2>
+      <div id="versionList" class="vlist muted">尚未导入</div>
+    </section>
+    <section>
+      <h2>模块加载快照</h2>
+      <label>模块名</label><input id="modName" value="app.exe"/>
+      <label>ELF 首选基址 p_vaddr</label><input id="prefBase" class="mono" value="0x0"/>
+      <label>运行时加载基址</label><input id="loadBase" class="mono" value="0x555555554000"/>
+      <label>加载代次 generation</label><input id="gen" type="number" value="1"/>
+      <button onclick="createSnapshot()">固定快照</button>
+      <div id="snapList" class="muted" style="margin-top:6px"></div>
+    </section>
+  </div>
+  <div class="main">
+    <section id="overviewSec" style="display:none">
+      <h2>概览</h2>
+      <div id="overview"></div>
+    </section>
+    <section id="sectionSec" style="display:none">
+      <h2>Section 地图（含原始字节摘要）</h2>
+      <div id="sectionMap"></div>
+      <details style="margin-top:8px"><summary>表格视图</summary>
+        <div style="max-height:260px;overflow:auto"><table id="sectionTable"></table></div>
+      </details>
+    </section>
+    <section id="cuSec" style="display:none">
+      <h2>Compilation Units / 地址范围</h2>
+      <div id="cuList" style="max-height:220px;overflow:auto"></div>
+      <details style="margin-top:8px"><summary>全部函数范围（含重叠 / 零长度）</summary>
+        <div style="max-height:260px;overflow:auto"><table id="rangeTable"></table></div>
+      </details>
+    </section>
+    <section id="lineSec" style="display:none">
+      <h2>Line Program 状态变化</h2>
+      <div id="linePicker" class="muted">选择一个 CU</div>
+      <div id="lineView" style="max-height:360px;overflow:auto"></div>
+    </section>
+    <section id="querySec" style="display:none">
+      <h2>批量粘贴栈地址</h2>
+      <div class="row">
+        <select id="snapSelect" style="flex:0 0 240px"><option value="">无快照（按相对地址）</option></select>
+        <button onclick="runQuery()">查询</button>
+        <button onclick="saveCrash()">存为崩溃记录</button>
+      </div>
+      <label>每行一个运行时地址（可带噪声前缀，自动抽取 hex）</label>
+      <textarea id="stackInput" class="mono" placeholder="#0  0x00005555555552b0 in func&#10;#1  0x0000555555555130"></textarea>
+      <div id="queryResults"></div>
+    </section>
+    <section id="crashSec" style="display:none">
+      <h2>历史崩溃记录（绑定旧版本，不被新导入修改）</h2>
+      <div id="crashList"></div>
+    </section>
+  </div>
+</div>
+<script src="/static/app.js"></script>
+</body>
+</html>
