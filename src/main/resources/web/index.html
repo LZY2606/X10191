@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>行址罗盘</title>
+<link rel="stylesheet" href="/styles.css"/>
+</head>
+<body>
+<header>
+  <h1>行址罗盘 <span class="sub">Address Compass · ELF / DWARF 4 &amp; 5 本地解析</span></h1>
+</header>
+<nav>
+  <button data-tab="modules" class="active">模块 / Section 地图</button>
+  <button data-tab="detail">CU · 范围 · 行程序</button>
+  <button data-tab="inline">内联树</button>
+  <button data-tab="query">地址查询</button>
+  <button data-tab="snapshot">加载快照</button>
+  <button data-tab="batch">批量栈地址</button>
+  <button data-tab="records">崩溃记录</button>
+</nav>
+<main>
+  <section id="modules" class="tab active">
+    <h2>调试文件版本（导入新版本不改旧崩溃记录）</h2>
+    <div class="row">
+      <input id="modKey" placeholder="模块 key（留空用文件名）"/>
+      <input type="file" id="modPick" accept=".elf,.so,.o,.dwp,.dwo,application/octet-stream"/>
+      <input id="modBase64" placeholder="或粘贴 base64 ELF" style="flex:2"/>
+      <button id="btnImport">导入</button>
+    </div>
+    <div id="moduleList" class="cards"></div>
+    <div id="moduleWarnings" class="warnbox"></div>
+  </section>
+
+  <section id="detail" class="tab">
+    <h2>编译单元 / 地址范围 / Line Sequence</h2>
+    <div class="row">
+      <select id="detailModule"></select>
+      <select id="detailCu"></select>
+    </div>
+    <h3>Section 地图</h3>
+    <div id="sectionMap"></div>
+    <h3>地址范围（零长度范围有标记，不参与命中）</h3>
+    <div id="rangeTable"></div>
+    <h3>Line Sequences 与状态变化</h3>
+    <div id="sequenceList"></div>
+  </section>
+
+  <section id="inline" class="tab">
+    <h2>内联调用树</h2>
+    <div class="row">
+      <select id="inlineModule"></select>
+      <select id="inlineCu"></select>
+    </div>
+    <div id="inlineTree" class="tree"></div>
+  </section>
+
+  <section id="query" class="tab">
+    <h2>地址 → 源码（含全部候选与解释，非 addr2line 一句话）</h2>
+    <div class="row">
+      <select id="qModule"></select>
+      <input id="qRel" placeholder="相对地址，如 0x1145"/>
+      <input id="qBias" placeholder="load bias" value="0x0"/>
+      <input id="qGen" placeholder="加载代次" value="1" style="width:80px"/>
+      <button id="btnQuery">查询</button>
+    </div>
+    <div id="queryResult"></div>
+  </section>
+
+  <section id="snapshot" class="tab">
+    <h2>固定模块加载快照（bias + 代次）</h2>
+    <div class="row"><input id="snapName" placeholder="快照名，如 crash-2026-09-22" style="flex:1"/></div>
+    <div id="snapRows"></div>
+    <div class="row"><button id="btnAddLoad">+ 模块加载</button><button id="btnSaveSnap">保存快照</button></div>
+    <h3>已有快照</h3>
+    <div id="snapshotList"></div>
+  </section>
+
+  <section id="batch" class="tab">
+    <h2>批量粘贴栈地址</h2>
+    <div class="row">
+      <select id="batchSnap"></select>
+      <input id="batchName" placeholder="批次名"/>
+    </div>
+    <textarea id="batchRaw" rows="8" placeholder="每行一个地址：&#10;0x7ff100001145&#10;0x7ff100001080"></textarea>
+    <div class="row"><button id="btnBatch">解析并保存</button></div>
+    <div id="batchResult"></div>
+  </section>
+
+  <section id="records" class="tab">
+    <h2>崩溃记录（只读历史）</h2>
+    <div id="recordList"></div>
+  </section>
+</main>
+<script src="/app.js"></script>
+</body>
+</html>
