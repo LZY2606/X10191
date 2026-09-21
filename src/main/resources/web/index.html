@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>行址罗盘</title>
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="logo">⌖</span>
+    <div>
+      <h1>行址罗盘</h1>
+      <p class="tagline">ELF / DWARF 地址 → 源码行 · 内联调用链 · 加载快照</p>
+    </div>
+  </div>
+  <div class="health" id="health">connecting…</div>
+</header>
+
+<nav class="tabs">
+  <button class="tab active" data-tab="modules">模块与版本</button>
+  <button class="tab" data-tab="explore">Section / CU / 行程序</button>
+  <button class="tab" data-tab="snapshots">加载快照</button>
+  <button class="tab" data-tab="resolve">批量地址</button>
+  <button class="tab" data-tab="crashes">崩溃记录</button>
+</nav>
+
+<main>
+  <!-- MODULES -->
+  <section id="tab-modules" class="panel active">
+    <div class="card">
+      <h2>导入调试文件</h2>
+      <form id="import-form">
+        <label>可执行 / 分离调试文件
+          <input type="file" name="file" required>
+        </label>
+        <label class="optional">.dwo / .dwp 伴随文件（可多选，可留空）
+          <input type="file" name="companion" multiple>
+        </label>
+        <button type="submit">导入为新版本</button>
+      </form>
+      <div id="import-result" class="result"></div>
+    </div>
+    <div class="card">
+      <h2>已导入模块（旧版本不可变）</h2>
+      <table id="modules-table">
+        <thead><tr><th>模块</th><th>版本</th><th>Build ID</th><th>内容 SHA-256</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- EXPLORE -->
+  <section id="tab-explore" class="panel">
+    <div class="card">
+      <h2>Section 地图与原始字节摘要</h2>
+      <div id="module-picker"></div>
+      <div id="section-map"></div>
+    </div>
+    <div class="card">
+      <h2>Compilation Units</h2>
+      <div id="cu-list"></div>
+    </div>
+    <div class="card">
+      <h2>地址范围（函数 / DIE）</h2>
+      <div id="range-list"></div>
+    </div>
+    <div class="card">
+      <h2>Line program 状态机</h2>
+      <div id="line-viewer"></div>
+    </div>
+    <div class="card">
+      <h2>内联树</h2>
+      <div id="inline-tree"></div>
+    </div>
+    <div class="card">
+      <h2>解析问题与可信度</h2>
+      <div id="issue-list"></div>
+    </div>
+  </section>
+
+  <!-- SNAPSHOTS -->
+  <section id="tab-snapshots" class="panel">
+    <div class="card">
+      <h2>固定模块加载快照</h2>
+      <form id="snapshot-form">
+        <label>快照名称 <input name="name" placeholder="crash-2026-09-22"></label>
+        <button>创建快照</button>
+      </form>
+      <div id="snapshot-list"></div>
+    </div>
+    <div class="card" id="entry-card" hidden>
+      <h2>快照 <span id="snap-title"></span> — 加载模块</h2>
+      <form id="entry-form">
+        <label>模块版本
+          <select name="moduleVersionId"></select>
+        </label>
+        <label>Load bias (hex) <input name="loadBias" value="0x0"></label>
+        <label>链接基址 base address（留空=自动从 PT_LOAD 取）
+          <input name="baseAddress" placeholder="auto">
+        </label>
+        <label>加载代次 generation（留空=自动 +1）
+          <input name="generation" placeholder="auto">
+        </label>
+        <button>固定到快照</button>
+      </form>
+      <div id="entry-list"></div>
+    </div>
+  </section>
+
+  <!-- RESOLVE -->
+  <section id="tab-resolve" class="panel">
+    <div class="card">
+      <h2>批量粘贴栈地址</h2>
+      <label>快照
+        <select id="resolve-snapshot"></select>
+      </label>
+      <label>Segment selector
+        <input id="resolve-segment" value="0" size="4">
+      </label>
+      <textarea id="address-box" rows="8"
+        placeholder="0x7f001040&#10;0x7f002058&#10;# 支持空格/逗号/换行分隔与 # 注释"></textarea>
+      <button id="resolve-btn">解析</button>
+      <button id="save-crash-btn">保存为崩溃记录</button>
+      <input id="crash-label" placeholder="崩溃记录标签（保存时填写）">
+    </div>
+    <div id="resolve-results"></div>
+  </section>
+
+  <!-- CRASHES -->
+  <section id="tab-crashes" class="panel">
+    <div class="card">
+      <h2>崩溃记录（导入新调试文件不影响旧记录）</h2>
+      <div id="crash-list"></div>
+    </div>
+    <div id="crash-detail"></div>
+  </section>
+</main>
+
+<script src="/app.js"></script>
+</body>
+</html>
