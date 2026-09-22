@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>行址罗盘 · Line Address Compass</title>
+<link rel="stylesheet" href="app.css"/>
+</head>
+<body>
+<header>
+  <h1>行址罗盘</h1>
+  <div class="sub">ELF / DWARF 4&amp;5 · 本地解析 · 地址 → 源码行号 · 内联调用链</div>
+</header>
+<nav>
+  <button data-tab="query" class="active">地址查询</button>
+  <button data-tab="files">导入与版本</button>
+  <button data-tab="detail">Section / CU</button>
+  <button data-tab="lines">Line Program</button>
+  <button data-tab="snapshots">加载快照</button>
+</nav>
+
+<main>
+  <section id="tab-query" class="tab active">
+    <div class="card">
+      <h2>批量粘贴栈地址</h2>
+      <div class="row">
+        <label>固定加载快照
+          <select id="snapshot-select"><option value="">（无：按链接 vaddr 查全部导入）</option></select>
+        </label>
+        <button id="btn-query">解析</button>
+        <button id="btn-demo" class="ghost">填入演示地址</button>
+      </div>
+      <textarea id="addresses" rows="6"
+        placeholder="每行一个地址：0x401123&#10;模块名:0x7f8a10001234&#10;0x1:0x401000 （分段 seg:offset）&#10;+0x123 （相对模块基址）"></textarea>
+    </div>
+    <div id="query-results"></div>
+  </section>
+
+  <section id="tab-files" class="tab">
+    <div class="card">
+      <h2>导入调试文件（新版本，不改旧记录）</h2>
+      <input type="file" id="import-file"/>
+      <button id="btn-import">上传 ELF / DWO</button>
+      <div id="import-status"></div>
+    </div>
+    <div class="card">
+      <h2>已导入版本</h2>
+      <table id="files-table">
+        <thead><tr><th>ID</th><th>路径</th><th>SHA-256</th><th>CU</th><th>Scope</th><th>问题</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="tab-detail" class="tab">
+    <div class="card">
+      <h2>Section 地图与 CU / 范围</h2>
+      <div class="row">
+        <label>文件 <select id="detail-file"></select></label>
+      </div>
+      <div id="detail-body"></div>
+    </div>
+  </section>
+
+  <section id="tab-lines" class="tab">
+    <div class="card">
+      <h2>Line Program 状态变化</h2>
+      <div class="row">
+        <label>文件 <select id="lines-file"></select></label>
+        <label>stmt_list <select id="lines-stmt"></select></label>
+      </div>
+      <div id="lines-body"></div>
+    </div>
+  </section>
+
+  <section id="tab-snapshots" class="tab">
+    <div class="card">
+      <h2>固定模块加载快照</h2>
+      <div class="row">
+        <input id="snap-label" placeholder="快照标签，例如 crash-2026-09-23"/>
+        <button id="btn-snap">从当前已导入模块创建快照</button>
+      </div>
+      <div id="snap-list"></div>
+    </div>
+  </section>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
