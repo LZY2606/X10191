@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>行址罗盘</title>
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+<header>
+  <h1>行址罗盘 <span class="sub">本地 ELF / DWARF 地址落点解释器</span></h1>
+</header>
+<div class="layout">
+  <aside class="panel">
+    <h2>① 导入调试文件（生成新版本）</h2>
+    <form id="upload-form">
+      <input name="label" placeholder="版本标签，如 build-2026-09-23">
+      <label>主 ELF / 可执行文件
+        <input type="file" name="main" required>
+      </label>
+      <label>.dwo 同伴文件（可多选）
+        <input type="file" name="dwo" multiple>
+      </label>
+      <button type="submit">上传并解析</button>
+    </form>
+    <h2>版本（导入新版本不改动旧崩溃记录）</h2>
+    <select id="version-select"></select>
+    <h2>② 固定模块加载快照</h2>
+    <div class="mod-row">
+      <input id="mod-name" value="main" size="7">
+      <input id="mod-runtime" placeholder="运行时基址 0x…" size="14">
+      <input id="mod-file" placeholder="文件基址（可空）" size="14">
+      <button id="add-mod" type="button">+</button>
+    </div>
+    <ul id="mod-list" class="mod-list"></ul>
+    <input id="snap-label" placeholder="快照标签">
+    <button id="save-snap" type="button">固定当前快照</button>
+    <select id="snapshot-select"></select>
+    <h2>说明</h2>
+    <p class="hint">只在本机解析，不调用 addr2line / 系统调试器。保留所有合法候选（重叠函数、多个 line sequence），按最窄范围 → 内联深度 → 显式优先级稳定排序。</p>
+  </aside>
+
+  <main class="panel">
+    <h2>③ 批量粘贴栈地址</h2>
+    <textarea id="addresses" rows="4" placeholder="每行一个地址&#10;0x401134&#10;0x401156"></textarea>
+    <button id="resolve-btn" type="button">解析地址</button>
+    <div id="results"></div>
+
+    <h2>Section 地图</h2>
+    <div id="section-map" class="section-map"></div>
+
+    <h2>地址范围（函数 / 内联 / 零长度）</h2>
+    <div id="ranges" class="ranges"></div>
+
+    <div class="two-col">
+      <div>
+        <h2>Line sequences</h2>
+        <div id="sequences" class="sequences"></div>
+      </div>
+      <div>
+        <h2>Line program 状态变化</h2>
+        <div id="linerows" class="linerows"></div>
+      </div>
+    </div>
+
+    <h2>内联树 / CU 与信任度</h2>
+    <div id="cu-and-tree"></div>
+  </main>
+</div>
+<script src="/app.js"></script>
+</body>
+</html>
