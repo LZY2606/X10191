@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>行址罗盘</title>
+<style>
+:root{--bg:#0f1420;--panel:#171e2e;--panel2:#1d2740;--ink:#e6ecf8;--mut:#8b98b5;--line:#2a3650;--acc:#5ec8ff;--ok:#4ade80;--warn:#fbbf24;--bad:#f87171;--pur:#c084fc}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,"PingFang SC","Microsoft YaHei",Segoe UI,sans-serif;background:var(--bg);color:var(--ink)}
+header{padding:14px 22px;border-bottom:1px solid var(--line);display:flex;align-items:baseline;gap:14px;background:linear-gradient(180deg,#141b2c,#0f1420)}
+header h1{font-size:20px;margin:0;letter-spacing:2px}
+header .sub{color:var(--mut);font-size:12px}
+.wrap{display:grid;grid-template-columns:330px 1fr;gap:0;min-height:calc(100vh - 53px)}
+.side{border-right:1px solid var(--line);padding:14px;background:var(--panel);overflow:auto;max-height:calc(100vh - 53px)}
+.main{padding:18px 22px;overflow:auto;max-height:calc(100vh - 53px)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
+.card h2{font-size:14px;margin:0 0 10px;color:var(--acc)}
+label{font-size:12px;color:var(--mut);display:block;margin:8px 0 4px}
+input,textarea,select,button{font:inherit}
+input[type=text],textarea,select{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:6px;padding:7px 9px}
+textarea{min-height:96px;resize:vertical;font-family:ui-monospace,Menlo,monospace;font-size:12px}
+button{background:var(--acc);color:#07223a;border:0;border-radius:6px;padding:8px 14px;font-weight:600;cursor:pointer;margin-top:10px}
+button.ghost{background:transparent;color:var(--acc);border:1px solid var(--line)}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.muted{color:var(--mut);font-size:12px}
+.pill{display:inline-block;font-size:11px;padding:1px 7px;border-radius:99px;border:1px solid var(--line);margin:2px 3px 2px 0}
+.pill.v4{color:#9ecbff;border-color:#2d4a73}
+.pill.v5{color:#c4b5fd;border-color:#4c3a73}
+.pill.bad{color:var(--bad);border-color:#5b2b2b}
+.pill.ok{color:var(--ok);border-color:#26573a}
+.pill.warn{color:var(--warn);border-color:#5a4a1f}
+.list-item{padding:7px 9px;border:1px solid var(--line);border-radius:6px;margin-bottom:6px;cursor:pointer;font-size:12px}
+.list-item.active{background:var(--panel2);border-color:var(--acc)}
+.list-item small{color:var(--mut)}
+.tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.tab{padding:6px 12px;border:1px solid var(--line);border-radius:6px 6px 0 0;cursor:pointer;font-size:13px;color:var(--mut);background:var(--panel)}
+.tab.active{color:var(--ink);border-bottom-color:var(--acc);background:var(--panel2)}
+table{border-collapse:collapse;width:100%;font-size:12px}
+th,td{border-bottom:1px solid var(--line);padding:5px 8px;text-align:left;vertical-align:top}
+th{color:var(--mut);font-weight:500}
+.mono{font-family:ui-monospace,Menlo,monospace}
+.secbar{position:relative;height:26px;background:var(--panel2);border-radius:5px;margin:6px 0;overflow:hidden}
+.secseg{position:absolute;top:0;height:100%;background:#2c4a73;border-right:1px solid #0f1420;font-size:10px;overflow:hidden;white-space:nowrap;padding:5px 4px;color:#bcd8ff}
+.secseg.miss{background:repeating-linear-gradient(45deg,#241c1c,#241c1c 6px,#1d1717 6px,#1d1717 12px)}
+.rangebox{border:1px solid var(--line);border-radius:6px;padding:6px 9px;margin:4px 0;font-family:ui-monospace,Menlo,monospace;font-size:12px}
+.tree{font-size:13px;line-height:1.9}
+.tree ul{list-style:none;margin:0;padding-left:18px;border-left:1px dashed var(--line)}
+.frame{border:1px solid var(--line);border-left:3px solid var(--pur);border-radius:6px;padding:8px 10px;margin:6px 0;background:var(--panel2)}
+.cand{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:10px}
+.cand.best{border-color:var(--ok)}
+.tag{font-size:11px;color:var(--pur)}
+.warnbox{background:#2a2413;border:1px solid #5a4a1f;color:var(--warn);border-radius:6px;padding:7px 10px;font-size:12px;margin:6px 0}
+.badbox{background:#2a1717;border:1px solid #5b2b2b;color:var(--bad);border-radius:6px;padding:7px 10px;font-size:12px;margin:6px 0}
+.okbox{background:#12281a;border:1px solid #26573a;color:var(--ok);border-radius:6px;padding:7px 10px;font-size:12px;margin:6px 0}
+.stateline{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px;font-size:10px;color:var(--mut)}
+.filetag{color:var(--acc)}
+details summary{cursor:pointer;color:var(--mut);font-size:12px}
+.k{color:var(--mut)}
+a{color:var(--acc)}
+</style>
+</head>
+<body>
+<header>
+  <h1>行址罗盘</h1>
+  <span class="sub">ELF / DWARF 4 &amp; 5 本地解析 · section 地图 · 行程序状态机 · 内联树 · 地址→源码</span>
+</header>
+<div class="wrap">
+  <div class="side">
+    <div class="card">
+      <h2>① 导入调试文件</h2>
+      <label>模块名（可选）</label>
+      <input type="text" id="modName" placeholder="如 libfoo / crash-server">
+      <label>文件名（可选）</label>
+      <input type="text" id="fileName" placeholder="libfoo.so.1.debug">
+      <label>ELF 字节（hex，可带空白；或 base64）</label>
+      <textarea id="payload" class="mono" placeholder="7f454c46..."></textarea>
+      <div class="row"><button id="btnImport">导入为新版本</button>
+        <button class="ghost" id="btnDemo">载入演示 fixture</button></div>
+      <div id="importMsg"></div>
+    </div>
+    <div class="card">
+      <h2>② 模块 / 版本</h2>
+      <div id="versionList"><div class="muted">尚未导入</div></div>
+    </div>
+    <div class="card">
+      <h2>③ 固定加载快照</h2>
+      <label>load bias（运行时基址）</label>
+      <input type="text" id="loadBias" class="mono" value="0x5555550000">
+      <label>加载代次 generation（可选，自动递增）</label>
+      <input type="text" id="generation" class="mono" placeholder="auto">
+      <label>备注</label>
+      <input type="text" id="snapNote" placeholder="如 mmap 后的第一次加载">
+      <button id="btnSnap">为当前版本创建快照</button>
+      <div id="snapList" style="margin-top:8px"></div>
+    </div>
+  </div>
+  <div class="main">
+    <div class="card">
+      <h2>④ 批量粘贴栈地址查询</h2>
+      <div class="row" style="align-items:end">
+        <div style="flex:2">
+          <textarea id="addrs" class="mono" placeholder="0x5555551234&#10;#7 0x55555528a0 +0x20&#10;5555553001"></textarea>
+        </div>
+        <div style="flex:1">
+          <label>使用快照</label>
+          <select id="snapSelect"></select>
+          <label>保存为崩溃记录（可选）</label>
+          <input type="text" id="crashTitle" placeholder="崩溃标题">
+          <button id="btnQuery">查询</button>
+        </div>
+      </div>
+      <div id="queryOut" style="margin-top:10px"></div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" data-tab="sections">Section 地图</div>
+      <div class="tab" data-tab="ranges">地址范围</div>
+      <div class="tab" data-tab="lines">行程序状态机</div>
+      <div class="tab" data-tab="tree">内联树</div>
+      <div class="tab" data-tab="cu">CU / 可信度</div>
+      <div class="tab" data-tab="crashes">崩溃记录</div>
+    </div>
+    <div id="tabBody" class="card" style="min-height:300px"><div class="muted">选择版本后在此展示。</div></div>
+  </div>
+</div>
+<script>
+const $=s=>document.querySelector(s); const $$=s=>[...document.querySelectorAll(s)];
+const api=async(p,o)=>{const r=await fetch('/api'+p,{headers:{'Content-Type':'application/json'},...o});
+  if(!r.ok){let e={};try{e=await r.json()}catch(_){};throw new Error(e.error||('HTTP '+r.status));}
+  return r.json();};
+const hx=n=>n==null?'—':'0x'+(BigInt.asUintN(64,BigInt(n)).toString(16));
+let VERSIONS=[], CURRENT=null, SNAPS=[], CURRENT_TAB='sections';
+function esc(s){return String(s??'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+function renderVersions(){
+  const box=$('#versionList');
+  if(!VERSIONS.length){box.innerHTML='<div class="muted">尚未导入</div>';return;}
+  box.innerHTML=VERSIONS.map(v=>`<div class="list-item ${CURRENT===v.id?'active':''}" data-v="${v.id}">
+     <b>${esc(v.moduleName)}</b> <small>v${v.version}</small><br>
+     <small class="mono">${(v.sha256||'').slice(0,12)} · ${v.size}B</small><br>
+     <small>${v.filename?esc(v.filename):''} ELF${v.elfClass===2?'64':v.elfClass===1?'32':'?'}
+     ${v.sections.some(s=>s.present)?' · '+v.sections.filter(s=>s.present).length+' sections':''}</small>
+   </div>`).join('');
+  $$('#versionList .list-item').forEach(el=>el.onclick=()=>{CURRENT=+el.dataset.v;refreshAll();});
+}
+async function loadVersions(){
+  const r=await api('/versions'); VERSIONS=r.versions; renderVersions();
+}
+async function loadSnaps(){
+  const q=CURRENT?('?moduleVersionId='+CURRENT):'';
+  SNAPS=(await api('/snapshots'+q)).snapshots;
+  $('#snapList').innerHTML=SNAPS.map(s=>`<div class="muted mono">snap#${s.id} gen${s.generation} bias=0x${BigInt(s.loadBias<0?('0x'+(BigInt.asUintN(64,BigInt(s.loadBias))).toString(16)):BigInt(s.loadBias).toString(16))} ${s.note?esc(s.note):''}</div>`).join('')||'<span class="muted">无</span>';
+  $('#snapSelect').innerHTML=SNAPS.map(s=>`<option value="${s.id}">#${s.id} gen${s.generation} bias 0x${BigInt(s.loadBias<0?(BigInt.asUintN(64,BigInt(s.loadBias)).toString(16)):BigInt(s.loadBias).toString(16)).toString(16)}</option>`).join('');
+}
+async function refreshAll(){renderVersions();await loadSnaps();renderTab(CURRENT_TAB);}
+
+$('#btnImport').onclick=async()=>{
+  const msg=$('#importMsg');msg.innerHTML='<span class="muted">解析中…</span>';
+  try{
+    const r=await api('/import',{method:'POST',body:JSON.stringify({
+      module:$('#modName').value||null, filename:$('#fileName').value||null, hexBase64:$('#payload').value})});
+    msg.innerHTML=`<div class="okbox">已导入 #${r.id}（${esc(r.moduleName)} v${r.version}）。旧版本保持不变。</div>`;
+    CURRENT=r.id; await loadVersions(); await loadSnaps(); renderTab(CURRENT_TAB);
+  }catch(e){msg.innerHTML=`<div class="badbox">${esc(e.message)}</div>`;}
+};
+$('#btnSnap').onclick=async()=>{
+  if(!CURRENT){alert('请先选择版本');return;}
+  try{
+    const gen=$('#generation').value.trim()?Number($('#generation').value):null;
+    await api('/snapshots',{method:'POST',body:JSON.stringify({moduleVersionId:CURRENT,
+      generation:gen, loadBias:$('#loadBias').value.trim()||'0x0', note:$('#snapNote').value||null})});
+    await loadSnaps();
+  }catch(e){alert(e.message);}
+};
+$$('.tab').forEach(t=>t.onclick=()=>{$$('.tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');CURRENT_TAB=t.dataset.tab;renderTab(CURRENT_TAB);});
+
+function fmtU64(n){ // SQLite/Long 可能是负数
+  const b=BigInt(n); return '0x'+BigInt.asUintN(64,b).toString(16);
+}
+async function renderTab(tab){
+  const body=$('#tabBody');
+  if(!CURRENT){body.innerHTML='<div class="muted">先在左侧选择或导入一个版本。</div>';return;}
+  try{
+    if(tab==='sections') return renderSections(body);
+    if(tab==='ranges') return renderRanges(body);
+    if(tab==='lines') return renderLines(body);
+    if(tab==='tree') return renderTree(body);
+    if(tab==='cu') return renderCu(body);
+    if(tab==='crashes') return renderCrashes(body);
+  }catch(e){body.innerHTML=`<div class="badbox">${esc(e.message)}</div>`;}
+}
+async function renderSections(body){
+  const v=await api('/versions/'+CURRENT);
+  const present=v.sections.filter(s=>s.present);
+  const max=Math.max(...present.map(s=>Number(s.fileOffset)+Number(s.size)),1);
+  const rows=v.sections.map(s=>{
+    const pct=(Number(s.fileOffset)/max*100).toFixed(3);
+    const w=Math.max(Number(s.size)/max*100,s.present?0.4:0);
+    return s.present?`<div class="secbar" title="${esc(s.name)} off=${fmtU64(s.fileOffset)} size=${s.size}">
+        <div class="secseg" style="left:${pct}%;width:${w}%">${esc(s.name)} <small>${s.size}B</small></div></div>`
+      :`<div class="secbar"><div class="secseg miss" style="left:0;width:100%;color:#d9a0a0">${esc(s.name)} 缺失</div></div>`;
+  }).join('');
+  body.innerHTML=`<h2>Section 地图</h2>
+    <p class="muted">ELF${v.elfClass===2?'64':v.elfClass===1?'32':'?'} · sha256 <span class="mono">${esc(v.sha256.slice(0,24))}…</span> · 文件 ${v.size} 字节（原始字节已入库保存）</p>
+    ${rows}
+    <details><summary>section 摘要表（offset / 虚拟地址 / 字节摘要）</summary>
+    <table><tr><th>section</th><th>文件偏移</th><th>vaddr</th><th>大小</th><th>SHA256(前12)</th></tr>
+    ${v.sections.map(s=>`<tr><td class="mono">${esc(s.name)}</td>
+      <td class="mono">${s.present?fmtU64(s.fileOffset):'—'}</td>
+      <td class="mono">${s.present?fmtU64(s.vaddr):'—'}</td>
+      <td class="mono">${s.present?s.size:'—'}</td>
+      <td class="mono">${s.sha256Short?'<span class="pill">'+s.sha256Short+'</span>':'<span class="pill bad">缺失</span>'}</td></tr>`).join('')}
+    </table></details>
+    ${v.warnings.length?`<div class="warnbox">解析告警：<ul>${v.warnings.map(w=>`<li>${esc(w)}</li>`).join('')}</ul></div>`:''}`;
+}
+async function renderRanges(body){
+  const trees=(await api('/versions/'+CURRENT+'/tree')).trees;
+  const blocks=[];
+  for(const t of trees){
+    const ranges=[];
+    (function walk(n){ if(!n)return; (n.ranges||[]).forEach(r=>ranges.push({name:n.name||n.tag,tag:n.tag,...r})); (n.children||[]).forEach(walk);})(t.tree);
+    if(!ranges.length) continue;
+    const min=Math.min(...ranges.map(r=>parseInt(r.low,16)));
+    const max=Math.max(...ranges.map(r=>parseInt(r.high,16)));
+    const span=Math.max(max-min,1);
+    blocks.push(`<h3 class="filetag">${esc(t.cu)} ${t.degraded?'<span class="pill bad">degraded</span>':''}</h3>`+
+      ranges.map(r=>{
+        const a=parseInt(r.low,16),b=parseInt(r.high,16);
+        const left=((a-min)/span*100).toFixed(2), width=Math.max((b-a)/span*100,0.5);
+        const empty=(b<=a);
+        return `<div class="secbar" style="height:22px" title="${esc(r.name)}">
+          <div class="secseg" style="left:${left}%;width:${empty?0.3:width}%;background:${r.tag==='DW_TAG_inlined_subroutine'?'#5b3a7a':'#2c4a73'}"></div></div>
+          <div class="rangebox">${r.tag.includes('inlined')?'<span class="tag">inline</span> ':'<b>${esc(r.name)}</b> '}
+            <span class="${empty?'pill warn':'pill ok'}">${empty?'零长度范围':'['+r.low+', '+r.high+')'}</span></div>`;
+      }).join(''));
+  }
+  body.innerHTML=`<h2>地址范围</h2><p class="muted">重叠范围会在同一条数轴上叠加显示；零长度范围保留并标注（不覆盖任何地址）。</h2>
+     ${blocks.join('')||'<div class="muted">无 DIE 范围（可能 CU 被隔离或缺 .debug_info）。</div>'}`;
+}
+async function renderLines(body){
+  const progs=(await api('/versions/'+CURRENT+'/lines')).programs;
+  body.innerHTML=`<h2>行程序状态机</h2><p class="muted">点击程序查看每条 opcode 后的状态（address/line/column/stmt/end_sequence）。</p>`+
+    progs.map((p,i)=>`<div class="list-item" data-cu="${esc(p.cuOffset)}">
+       <b>${p.files[0]?esc(p.files[0].name):'(无文件)'}</b>
+       <span class="pill ${p.tableVersion===5?'v5':'v4'}">DWARF ${p.tableVersion} 行表</span>
+       <span class="pill">CU ${p.cuOffset}</span>
+       <span class="pill">${p.sequenceCount} 个 sequence</span>
+       ${p.warnings.length?'<span class="pill warn">'+p.warnings.length+' 告警</span>':''}
+       <br><small class="muted">${p.files.map(f=>esc(f.name)).join(', ')}</small></div>`).join('');
+  if(!progs.length) body.innerHTML+='<div class="muted">无行程序。</div>';
+  $$('#tabBody .list-item').forEach(el=>el.onclick=async()=>{
+    const d=await api(`/versions/${CURRENT}/lines/${el.dataset.cu.replace('0x','')}`);
+    showLineModal(d);
+  });
+}
+function showLineModal(p){
+  const rows=p.rows.map((r,i)=>`<tr style="${r.endSequence?'color:#f87171':''}">
+     <td>${r.seq}</td><td class="mono">${r.address}${r.segment!='0'?(':'+r.segment):''}</td>
+     <td class="mono">${esc(r.file||'')}</td><td>${r.line}</td><td>${r.column}</td>
+     <td>${r.stmt?'✓':''}</td><td>${r.prologueEnd?'✓':''}</td><td>${r.endSequence?'END':''}</td>
+     <td>${r.discriminator||''}</td><td class="muted">${esc(r.event||'')}</td></tr>`).join('');
+  const w=window.open('','_blank','width=1000,height=700');
+  w.document.write(`<!doctype html><meta charset=utf-8><title>line program ${p.cuOffset}</title>
+  <body style="background:#0f1420;color:#e6ecf8;font:12px ui-monospace,Menlo">
+  <h3>行程序 ${p.headerOffset} · DWARF ${p.tableVersion} · ${p.rows.length} 行</h3>
+  <table border=1 cellpadding=4 cellspacing=0 style="border-color:#2a3650;border-collapse:collapse">
+  <tr><th>seq</th><th>address</th><th>file</th><th>line</th><th>col</th><th>stmt</th><th>prolog</th><th>end</th><th>disc</th><th>opcode</th></tr>
+  ${rows}</table>
+  ${p.warnings.length?('<pre style="color:#fbbf24">'+p.warnings.map(esc).join('\n')+'</pre>'):''}</body>`);
+}
+async function renderTree(body){
+  const trees=(await api('/versions/'+CURRENT+'/tree')).trees;
+  function node(n,depth){
+    if(!n)return '';
+    const rng=(n.ranges||[]).map(r=>`<span class="pill ${r.empty?'warn':'ok'}">[${r.low}, ${r.high})${r.empty?' 空':''}</span>`).join('');
+    const inline=n.tag==='DW_TAG_inlined_subroutine';
+    return `<li><div class="frame" style="margin-left:${depth*4}px">
+       <span class="tag">${n.tag}</span> <b>${esc(n.name||'(匿名)')}</b>
+       <span class="mono muted">${n.offset}</span> ${n.callLine?('<small class="muted">调用点行 '+n.callLine+'</small>'):''}
+       <div>${rng}</div></div>
+       ${n.children.length?'<ul>'+n.children.map(c=>node(c,depth+1)).join('')+'</ul>':''}</li>`;
+  }
+  body.innerHTML=`<h2>内联树</h2>`+trees.map(t=>
+    `<div class="tree"><h3 class="filetag">${esc(t.cu)} <span class="pill ${t.degraded?'bad':'ok'}">${t.degraded?'已隔离（结论受限）':'完整'}</span></h3>
+     <ul>${node(t.tree,0)}</ul></div>`).join('');
+}
+async function renderCu(body){
+  const cus=(await api('/versions/'+CURRENT+'/cus')).cus;
+  body.innerHTML=`<h2>Compilation Units 与可信度</h2><table>
+    <tr><th>偏移</th><th>名称</th><th>DWARF</th><th>类型</th><th>地址宽</th><th>DIE</th><th>stmt_list</th><th>dwo</th><th>状态</th></tr>
+    ${cus.map(c=>`<tr>
+      <td class="mono">${c.offset}</td>
+      <td>${esc(c.name||'')}<br><small class="muted">${esc(c.compDir||'')}</small></td>
+      <td><span class="pill ${c.version===5?'v5':'v4'}">v${c.version}</span></td>
+      <td>${c.unitType??'—'} ${c.split?'<span class="pill">split</span>':''}</td>
+      <td>${c.addressSize}</td><td>${c.dieCount}</td><td class="mono">${c.stmtList||'—'}</td>
+      <td>${c.dwoName?esc(c.dwoName)+(c.dwoId?' '+c.dwoId:''):'—'}</td>
+      <td>${c.degraded?'<span class="pill bad">degraded</span>':'<span class="pill ok">可信</span>'}</td></tr>
+      ${c.warnings.length?`<tr><td></td><td colspan="8">${c.warnings.map(w=>`<div class="warnbox">${esc(w)}</div>`).join('')}</td></tr>`:''}`).join('')}
+    </table>`;
+}
+async function renderCrashes(body){
+  const r=await api('/crashes');
+  body.innerHTML=`<h2>崩溃记录</h2><p class="muted">记录保存后不可变；重新导入调试文件只会产生新版本，不会改动旧记录。</p>`+
+    (r.crashes.length?`<table><tr><th>#</th><th>标题</th><th>时间</th><th>快照</th><th>地址</th></tr>
+    ${r.crashes.map(c=>`<tr><td>${c.id}</td><td>${esc(c.title)}</td><td>${new Date(c.createdAt).toLocaleString()}</td>
+      <td>snap#${c.snapshotId??'—'}</td><td class="mono">${c.addresses.map(esc).join('<br>')}</td></tr>`).join('')}</table>`
+    :'<div class="muted">暂无崩溃记录。批量查询时填写标题即可保存。</div>');
+}
+function framesHtml(c){
+  if(!c.frames.length) return '<div class="muted">（无 DIE 函数覆盖，仅有行号结论）</div>';
+  return c.frames.map((f,i)=>`<div class="frame">
+    <span class="tag">帧${f.depth}</span> <b>${esc(f.name)}</b> <span class="mono muted">${f.dieOffset}</span>
+    <span class="pill">${f.tag}</span>
+    ${f.rangeLow?`<span class="pill ok">范围 ${f.rangeLow}–${f.rangeHigh}（宽 ${f.width}）</span>`:''}
+    ${f.callLine?`<div class="muted">被内联调用自 ${esc(f.callFile||'')}:${f.callLine}</div>`:''}
+  </div>`).join('');
+}
+function candHtml(c,best){
+  return `<div class="cand ${best?'best':''}">
+    ${best?'<span class="pill ok">最佳解释</span>':''}
+    <b class="filetag">${esc(c.file||'?')}:${c.line}:${c.column}</b>
+    <span class="pill ${c.tableVersion===5?'v5':'v4'}">行表 DWARF${c.tableVersion}</span>
+    <span class="pill ${c.cuVersion===5?'v5':'v4'}">CU v${c.cuVersion}</span>
+    <span class="pill">${esc(c.cuName||c.cuOffset)}</span>
+    <span class="pill">sequence #${c.sequenceIndex} [${c.sequenceStart}, ${c.sequenceEnd})</span>
+    <span class="pill">source: ${esc(c.source)}</span>
+    <span class="pill ${c.isStmt?'ok':'warn'}">${c.isStmt?'statement':'非 statement'}</span>
+    <span class="pill">显式优先级 ${c.rank}</span>
+    <div style="margin:6px 0"><b>内联调用链</b>（最深在前）：</div>${framesHtml(c)}
+    ${c.warnings.map(w=>`<div class="warnbox">${esc(w)}</div>`).join('')}
+  </div>`;
+}
+$('#btnQuery').onclick=async()=>{
+  const out=$('#queryOut');
+  const snapId=$('#snapSelect').value;
+  if(!snapId){out.innerHTML='<div class="badbox">请先创建并选择加载快照。</div>';return;}
+  const lines=$('#addrs').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  out.innerHTML='<div class="muted">查询中…（共 '+lines.length+' 条）</div>';
+  try{
+    const r=await api('/query/batch',{method:'POST',body:JSON.stringify({
+      snapshotId:+snapId, addresses:lines, saveAs:$('#crashTitle').value||null})});
+    out.innerHTML=(r.crashId?`<div class="okbox">已保存为崩溃记录 #${r.crashId}（不可变）。</div>`:'')+
+      r.items.map(it=>{
+        if(!it.result) return `<div class="badbox">${esc(it.input)}：地址无法解析（格式非法或超出）</div>`;
+        const q=it.result;
+        return `<div class="card" style="margin-bottom:8px">
+          <b class="mono">${esc(it.input)}</b>
+          <span class="muted">运行时 ${q.runtimeAddress} − bias ${q.loadBias} = 相对 ${q.relativeAddress}</span>
+          <span class="pill">加载代次 ${q.snapshotGeneration}</span>
+          ${q.resolved?'':(q.degraded?'<span class="pill warn">未命中（含被隔离 CU）</span>':'<span class="pill bad">未命中任何 sequence</span>')}
+          ${q.warnings.map(w=>`<div class="warnbox">${esc(w)}</div>`).join('')}
+          <div style="margin-top:6px">${q.candidates.map((c,i)=>candHtml(c,i===0)).join('')}</div>
+        </div>`;
+      }).join('');
+  }catch(e){out.innerHTML=`<div class="badbox">${esc(e.message)}</div>`;}
+};
+$('#btnDemo').onclick=async()=>{
+  $('#importMsg').innerHTML='<span class="muted">正在生成演示 fixture（DWARF4+5、重叠、零长度、缺 dwo、未知 form）…</span>';
+  try{
+    const r=await fetch('/demo-fixture').then(x=>x.json());
+    $('#payload').value=r.hex; $('#modName').value='demo-fixture'; $('#fileName').value='demo.elf';
+    $('#importMsg').innerHTML='<div class="okbox">已生成演示字节，点击「导入为新版本」。</div>';
+  }catch(e){$('#importMsg').innerHTML='<div class="badbox">'+esc(e.message)+'</div>';}
+};
+(async()=>{ await loadVersions(); await loadSnaps(); })();
+</script>
+</body>
+</html>
