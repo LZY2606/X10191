@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>行址罗盘</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header>
+  <h1>行址罗盘 <small>ELF + DWARF 地址溯源（本地解析，不调用系统调试器）</small></h1>
+</header>
+<main>
+  <section class="panel">
+    <h2>1. 导入 ELF / 分离调试文件（形成不可变版本）</h2>
+    <input type="file" id="elfFile">
+    <button onclick="uploadFile()">导入并解析</button>
+    <span id="status" class="small"></span>
+    <div id="versionList" class="grid"></div>
+  </section>
+
+  <section class="panel" id="detail"></section>
+
+  <section class="panel">
+    <h2>2. 崩溃记录与模块加载快照</h2>
+    <input id="sessionTitle" placeholder="崩溃记录标题">
+    <button onclick="createSession()">新建崩溃记录</button>
+    <label>当前记录 ID <input id="sessionId" size="6" value="1"></label>
+    <div class="row">
+      <select id="moduleVersion" style="min-width:260px"></select>
+      <input id="moduleName" placeholder="模块名 (如 libc.so)" value="main">
+      <input id="loadBias" placeholder="load bias (0x...)" value="0x0">
+      <input id="generation" placeholder="加载代次" value="1" size="5">
+      <input id="segment" placeholder="segment" value="0" size="5">
+      <button onclick="addModule()">固定模块快照</button>
+    </div>
+    <div id="sessions" class="grid"></div>
+  </section>
+
+  <section class="panel">
+    <h2>3. 批量粘贴栈地址</h2>
+    <textarea id="stackAddrs" rows="6" placeholder="0x401176&#10;0x401203&#10;0x7ffff7..."></textarea>
+    <button onclick="batchResolve()">批量解析</button>
+    <div id="results"></div>
+  </section>
+</main>
+<script src="/static/app.js"></script>
+</body>
+</html>

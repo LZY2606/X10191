@@ -1,0 +1,34 @@
+* { box-sizing: border-box; }
+body { margin:0; font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background:#0f1420; color:#e6ebf5; }
+header { padding:16px 24px; background:linear-gradient(90deg,#1b2a4a,#243b6b); }
+header h1 { margin:0; font-size:22px; }
+header small { font-weight:400; opacity:.75; margin-left:10px; font-size:13px; }
+main { padding:20px; max-width:1100px; margin:0 auto; }
+.panel { background:#18203333; background:#161d2e; border:1px solid #2a3756; border-radius:10px; padding:16px; margin-bottom:18px; }
+h2 { font-size:16px; margin-top:0; }
+h4 { margin:14px 0 6px; }
+input, select, textarea, button { background:#0f1626; color:#e6ebf5; border:1px solid #33415f; border-radius:6px; padding:7px 10px; margin:3px; font-size:13px; }
+button { cursor:pointer; background:#2c4a86; }
+button:hover { background:#3a5da8; }
+textarea { width:100%; font-family:monospace; }
+.card { background:#1b2540; border:1px solid #2f3f63; border-radius:8px; padding:10px 12px; margin:8px 0; }
+.grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:8px; margin-top:10px; }
+.card { cursor:default; }
+#versionList .card { cursor:pointer; }
+.tag { display:inline-block; background:#243b6b; border-radius:4px; padding:1px 7px; font-size:11px; margin:2px; }
+.tag.split { background:#5a3d20; }
+.mono { font-family:ui-monospace,Menlo,monospace; font-size:12px; }
+.small { font-size:12px; opacity:.75; }
+.warn { background:#3d2a1a; border:1px solid #7a5520; border-radius:6px; padding:8px 10px; margin:8px 0; font-size:12px; }
+.maprow { display:flex; align-items:center; gap:8px; margin:3px 0; }
+.mapname { width:190px; }
+.bar { flex:1; background:#0d1424; border-radius:4px; height:14px; overflow:hidden; }
+.fill { display:block; height:100%; background:linear-gradient(90deg,#3e6bd6,#6fc3df); }
+table.rows { border-collapse:collapse; width:100%; margin-top:6px; }
+table.rows th, table.rows td { border:1px solid #2a3756; padding:2px 8px; font-size:12px; }
+table.rows th { background:#1d2a47; }
+.row { display:flex; flex-wrap:wrap; align-items:center; gap:4px; margin:8px 0; }
+.chainframe { font-family:ui-monospace,monospace; font-size:12px; margin:2px 0; }
+.inlinetree { background:#111a2e; border-left:3px solid #6fc3df; padding:6px 10px; margin:6px 0; border-radius:4px; }
+.res b.mono { color:#ffd27a; }
+details summary { cursor:pointer; }
