@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>行址罗盘</title>
+<style>
+  :root { --bg:#0f1420; --panel:#171e2e; --line:#26314a; --fg:#e8edf7; --mut:#93a0b8;
+          --acc:#4ea1ff; --ok:#38c172; --warn:#f6a609; --err:#ff5c5c; --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.5 system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; }
+  header { padding:14px 22px; border-bottom:1px solid var(--line); display:flex; align-items:baseline; gap:14px; }
+  header h1 { font-size:20px; margin:0; letter-spacing:2px; }
+  header .sub { color:var(--mut); font-size:12px; }
+  nav { display:flex; gap:4px; padding:10px 22px 0; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  nav button { background:none; border:1px solid transparent; border-bottom:none; color:var(--mut);
+      padding:8px 14px; cursor:pointer; border-radius:8px 8px 0 0; font-size:14px; }
+  nav button.active { color:var(--fg); background:var(--panel); border-color:var(--line); }
+  main { padding:18px 22px; max-width:1280px; margin:0 auto; }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px; margin-bottom:16px; }
+  .panel h2 { margin:0 0 12px; font-size:15px; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  label { color:var(--mut); font-size:12px; }
+  input, select, textarea { background:#0d1322; border:1px solid var(--line); color:var(--fg);
+      border-radius:6px; padding:7px 9px; font-family:var(--mono); font-size:13px; }
+  input[type=file] { font-family:inherit; }
+  textarea { width:100%; min-height:120px; resize:vertical; }
+  button.act { background:var(--acc); color:#08111f; border:none; border-radius:6px; padding:8px 16px;
+      font-weight:600; cursor:pointer; }
+  button.act:hover { filter:brightness(1.1); }
+  table { width:100%; border-collapse:collapse; font-size:12.5px; }
+  th, td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--mut); font-weight:500; position:sticky; top:0; background:var(--panel); }
+  td.mono, .mono { font-family:var(--mono); }
+  .scroll { max-height:420px; overflow:auto; border:1px solid var(--line); border-radius:8px; }
+  .tag { display:inline-block; padding:1px 7px; border-radius:10px; font-size:11px; }
+  .tag.ok { background:rgba(56,193,114,.15); color:var(--ok); }
+  .tag.warn { background:rgba(246,166,9,.15); color:var(--warn); }
+  .tag.err { background:rgba(255,92,92,.15); color:var(--err); }
+  .tag.info { background:rgba(78,161,255,.15); color:var(--acc); }
+  .muted { color:var(--mut); }
+  .cand { border:1px solid var(--line); border-radius:8px; padding:10px 12px; margin:8px 0; }
+  .cand.primary { border-color:var(--acc); }
+  .frames { margin:6px 0 0 14px; padding-left:12px; border-left:2px solid var(--line); }
+  .frame { padding:3px 0; font-family:var(--mono); font-size:12.5px; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  pre.json { background:#0d1322; border:1px solid var(--line); border-radius:8px; padding:10px;
+      max-height:300px; overflow:auto; font-size:12px; }
+  .bar { position:relative; height:18px; background:#0d1322; border-radius:4px; margin:2px 0; }
+  .bar > span { position:absolute; top:0; bottom:0; background:rgba(78,161,255,.4); border:1px solid var(--acc); }
+  .small { font-size:12px; }
+  @media (max-width:900px){ .grid2{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<header>
+  <h1>行址罗盘</h1>
+  <span class="sub">本地 ELF / DWARF 解析 · 行号 · 内联调用链 · 加载快照 · 版本化调试文件</span>
+</header>
+<nav id="tabs"></nav>
+<main id="view"></main>
+<script src="/app.js"></script>
+</body>
+</html>
