@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>行址罗盘</title>
+<style>
+:root{color-scheme:dark;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#0b1020;color:#e6edf7}
+body{margin:0;background:radial-gradient(circle at 20% 0%,#18254a 0,#0b1020 38%)}
+header{padding:28px 32px 16px;border-bottom:1px solid #263252}
+h1{margin:0;font-size:30px;letter-spacing:.08em}
+.subtitle{color:#93a4c7;margin-top:8px}
+main{display:grid;grid-template-columns:380px 1fr;gap:18px;padding:20px;}
+.card{background:#111a2f;border:1px solid #253150;border-radius:14px;padding:16px;box-shadow:0 10px 28px #0006;overflow:auto}
+h2{font-size:16px;margin:0 0 12px;color:#dbe7ff}
+label{display:block;font-size:12px;color:#9fb0d2;margin:10px 0 5px}
+input,select,textarea,button{width:100%;box-sizing:border-box;background:#0b1325;border:1px solid #34415f;color:#e6edf7;border-radius:9px;padding:9px;font:inherit}
+textarea{min-height:120px;resize:vertical}
+button{cursor:pointer;background:#2857d8;width:auto;padding:9px 16px;margin-top:12px;font-weight:700}
+button.secondary{background:#202c47}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}.three{grid-template-columns:2fr 1fr 1fr;display:grid;gap:8px}
+table{border-collapse:collapse;width:100%;font-size:12px;margin-top:8px}
+th,td{border-bottom:1px solid #24314d;padding:7px;text-align:left;vertical-align:top}
+th{color:#8ea0c4;position:sticky;top:0;background:#111a2f}
+.badge{display:inline-block;padding:2px 7px;border-radius:999px;background:#24385c;color:#bcd0ff;font-size:11px;margin:2px}
+.good{background:#164e3b}.warn{background:#6b4d12}.bad{background:#632837}
+.sectionbar{height:16px;background:#0b1325;border:1px solid #2f3d5e;border-radius:4px;position:relative;margin:8px 0 18px}
+.sectionbar span{position:absolute;top:-4px;height:24px;background:linear-gradient(#5e86ff,#2857d8);border-radius:4px;border:1px solid #9ab1ff}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.tree{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;white-space:pre-wrap}
+.small{font-size:12px;color:#93a4c7}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+pre{white-space:pre-wrap;background:#08101f;padding:10px;border-radius:8px;border:1px solid #23304c}
+@media(max-width:1000px){main{grid-template-columns:1fr}.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header><h1>行址罗盘</h1><div class="subtitle">本地 ELF / DWARF 解析 · 固定加载快照 · 多候选行址解释</div></header>
+<main>
+  <div class="card">
+    <h2>导入调试版本</h2>
+    <input id="file" type="file">
+    <button onclick="uploadVersion()">导入 ELF 或分离调试文件</button>
+    <label>调试版本（新版本追加，不改旧崩溃）</label>
+    <select id="version" onchange="loadVersion()"></select>
+    <div id="versionMeta" class="small"></div>
+
+    <h2 style="margin-top:22px">固定模块加载快照</h2>
+    <div class="three"><input id="moduleName" placeholder="模块名，如 app.so"><input id="runtimeBase" placeholder="运行基址"><input id="fileBase" placeholder="文件基址"></div>
+    <input id="generation" placeholder="加载代次，可选，如 pid/load-id">
+    <button class="secondary" onclick="addModule()">加入模块快照</button>
+    <table id="modules"><thead><tr><th>模块</th><th>load bias</th><th>代次</th><th></th></tr></thead><tbody></tbody></table>
+
+    <h2 style="margin-top:22px">批量栈地址</h2>
+    <textarea id="addresses" placeholder="每行一个地址，支持 0x401234；也可粘贴整段回溯，segment:offset 写成 1:0x401234"></textarea>
+    <button onclick="runQuery(false)">查询</button>
+    <button class="secondary" onclick="runQuery(true)">保存为崩溃记录</button>
+    <label>崩溃名称</label><input id="crashLabel" value="崩溃记录">
+  </div>
+
+  <div class="card">
+    <div class="grid">
+      <section><h2>Section 地图</h2><div id="sectionMap"></div><table id="sections"></table></section>
+      <section><h2>地址范围</h2><table id="ranges"></table></section>
+    </div>
+    <div class="grid" style="margin-top:18px">
+      <section><h2>Line Program 状态变化</h2><div id="lineTable"></div></section>
+      <section><h2>内联树与候选</h2><div id="results"></div><div id="inlineTree" class="tree"></div></section>
+    </div>
+  </div>
+</main>
+<script>
+let versions=[], selected=null, modules=[];
+const $=id=>document.getElementById(id);
+const hex=n=>'0x'+BigInt(n??0).toString(16);
+async function boot(){versions=await (await fetch('/api/versions')).json(); renderVersions(); if(versions[0]){$('version').value=versions[0].id; await loadVersion();}}
+function renderVersions(){ $('version').innerHTML=versions.map(v=>`<option value="${v.id}">#${v.id} ${v.filename} ${v.buildId?'build-id '+v.buildId:''}</option>`).join(''); }
+async function uploadVersion(){const f=$('file').files[0]; if(!f)return; const body=new FormData();body.append('file',f); await fetch('/api/versions',{method:'POST',body}); versions=await(await fetch('/api/versions')).json();renderVersions(); $('version').value=versions[0].id;loadVersion();}
+async function loadVersion(){const id=Number($('version').value); selected=await (await fetch('/api/versions/'+id)).json(); renderVersion();}
+function renderVersion(){const e=selected.elf; $('versionMeta').innerHTML=`<p><span class="badge">ELF${e.elfClass}</span><span class="badge">CU ${selected.compilationUnits.length}</span><span class="badge ${selected.warnings.length?'warn':'good'}">${selected.warnings.length} 条警告</span></p><pre>${selected.warnings.join('\n')||'无解析警告'}</pre>`;
+ const max=Math.max(...e.sections.map(s=>Number(s.fileOffset+s.fileSize)),1);
+ $('sectionMap').innerHTML=`<div class="sectionbar">${e.sections.map(s=>`<span title="${s.name} ${hex(s.fileOffset)}-${hex(s.fileOffset+s.fileSize)}\n${s.sha256}" style="left:${Number(s.fileOffset)*100/max}%;width:${Math.max(Number(s.fileSize)*100/max,.3)}%"></span>`).join('')}</div>`;
+ $('sections').innerHTML='<thead><tr><th>Section</th><th>偏移</th><th>大小</th><th>VMA</th><th>SHA-256</th></tr></thead><tbody>'+e.sections.filter(s=>s.fileSize).map(s=>`<tr><td>${s.name}</td><td class="mono">${hex(s.fileOffset)}</td><td class="mono">${hex(s.fileSize)}</td><td class="mono">${hex(s.virtualAddress)}</td><td class="mono small">${s.sha256.slice(0,16)}</td></tr>`).join('')+'</tbody>';
+ const ranges=selected.compilationUnits.flatMap(cu=>cu.ranges.map(r=>({...r,cu:cu.name,version:cu.version})));
+ $('ranges').innerHTML='<thead><tr><th>函数</th><th>范围</th><th>深度</th><th>CU / 来源</th></tr></thead><tbody>'+ranges.sort((a,b)=>Number(BigInt(a.start)-BigInt(b.start))).map(r=>`<tr><td>${r.name||'?'}</td><td class="mono">${hex(r.start)}–${hex(r.end)}${r.zeroLength?' <span class="badge warn">0长度</span>':''}</td><td>${r.inlineDepth}</td><td>${r.cu||''}<br><span class="small">DWARF${r.version} · ${r.source}</span></td></tr>`).join('')+'</tbody>';
+ renderLineTable(); renderInlineOverview();
+}
+function renderLineTable(){const programs=selected.compilationUnits.map(cu=>({cu,lp:cu.lineProgram})).filter(x=>x.lp); $('lineTable').innerHTML=programs.map(({cu,lp})=>`<h3>${cu.name||'CU '+hex(cu.offset)} <span class="badge">line v${lp.version}</span></h3><table><thead><tr><th>#</th><th>地址</th><th>文件:行:列</th><th>状态</th></tr></thead><tbody>${lp.allRows.map(r=>{const f=lp.files.find(x=>x.index===r.fileIndex); return `<tr><td>${r.index}</td><td class="mono">${hex(r.address)}</td><td>${f?.name||r.fileIndex}:${r.line}:${r.column}</td><td>${r.endSequence?'<span class="badge bad">end_sequence</span>':''}${r.basicBlock?'<span class="badge">block</span>':''}${r.prologueEnd?'<span class="badge good">prologue</span>':''}${r.epilogueBegin?'<span class="badge warn">epilogue</span>':''}</td></tr>`}).join('')}</tbody></table>`).join('')||'<p class="small">无 line program</p>'}
+function renderInlineOverview(){const roots=selected.compilationUnits.flatMap(cu=>cu.ranges.filter(r=>r.inlineDepth===0).map(r=>({...r,cu:cu.name}))); $('inlineTree').innerHTML=roots.slice(0,80).map(r=>{const child=selected.compilationUnits.flatMap(cu=>cu.ranges).filter(c=>c.name===r.name&&c.inlineDepth>0);return `${r.name||'?'} ${hex(r.start)}\n${child.map(c=>'  ↳ inline depth '+c.inlineDepth+' '+hex(c.start)+'–'+hex(c.end)+'\n').join('')}`}).join('')||'暂无可显示内联节点'}
+function addModule(){if(!selected)return; modules.push({name:$('moduleName').value||selected.filename,versionId:selected.id,runtimeBase:BigInt($('runtimeBase').value||0).toString(),fileBase:BigInt($('fileBase').value||(selected.programBase||0)).toString(),generation:$('generation').value||null}); modules.forEach(m=>{m.runtimeBase=Number(m.runtimeBase);m.fileBase=Number(m.fileBase);m.loadBias=m.runtimeBase-m.fileBase}); renderModules();}
+function renderModules(){$('modules').querySelector('tbody').innerHTML=modules.map((m,i)=>`<tr><td>${m.name}</td><td class="mono">${hex(m.loadBias)}</td><td>${m.generation||''}</td><td><button class="secondary" onclick="modules.splice(${i},1);renderModules()">删除</button></td></tr>`).join('')}
+async function runQuery(save){const request={label:$('crashLabel').value,addressText:$('addresses').value,modules}; const url=save?'/api/crashes':'/api/query'; const result=await(await fetch(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(request)})).json(); const rows=(result.results||result)||[]; $('results').innerHTML='<table><thead><tr><th>地址</th><th>结论</th><th>CU/序列</th><th>内联调用链</th></tr></thead><tbody>'+rows.map(r=>`<tr><td class="mono">${r.input}<br>${r.moduleName||''}<br>bias ${hex(r.loadBias||0)}</td><td>${r.matched?'<span class="badge good">命中</span>':'<span class="badge bad">未命中</span>'}<b>${r.file?r.file+':'+r.line+':'+(r.column||0):'无源码行'}</b><p class="small">${r.trusted.join('<br>')}</p><pre>${r.warnings.join('\n')||''}</pre></td><td>${r.cuName||''}<br><span class="small">DWARF${r.dwarfVersion||'?'} · line v${r.lineTableVersion||'?'}<br>${r.sequenceStart?hex(r.sequenceStart)+'–'+hex(r.sequenceEnd):''}</span></td><td>${r.inlineChain.map((f,i)=>'　'.repeat(i)+'↳ '+(f.name||'?')+' '+(f.callFile?f.callFile+':'+f.callLine:'')+'<br>').join('')}</td></tr>`).join('')+'</tbody></table>'}
+boot();
+</script>
+</body>
+</html>
