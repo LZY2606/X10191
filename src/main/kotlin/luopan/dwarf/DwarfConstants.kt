@@ -1,0 +1,135 @@
+package luopan.dwarf
+
+/** 仅列出解析器用到的 DWARF 常量；未列出的 tag/form 走通用路径。 */
+object DwTag {
+    const val COMPILE_UNIT = 0x11
+    const val SKELETON_UNIT = 0x4101
+    const val SPLIT_COMPILE_UNIT = 0x4102
+    const val SUBPROGRAM = 0x2e
+    const val INLINED_SUBROUTINE = 0x1d
+    const val LEXICAL_BLOCK = 0x0b
+    const val COMPILATION_UNIT_PLACEHOLDER = 0
+}
+
+object DwForm {
+    const val ADDR = 0x01
+    const val BLOCK2 = 0x03
+    const val BLOCK4 = 0x04
+    const val DATA2 = 0x05
+    const val DATA4 = 0x06
+    const val DATA8 = 0x07
+    const val STRING = 0x08
+    const val BLOCK = 0x09
+    const val BLOCK1 = 0x0a
+    const val DATA1 = 0x0b
+    const val FLAG = 0x0c
+    const val SDATA = 0x0d
+    const val STRP = 0x0e
+    const val UDATA = 0x0f
+    const val REF_ADDR = 0x10
+    const val REF1 = 0x11
+    const val REF2 = 0x12
+    const val REF4 = 0x13
+    const val REF8 = 0x14
+    const val REF_UDATA = 0x15
+    const val INDIRECT = 0x16
+    const val SEC_OFFSET = 0x17
+    const val EXPRLOC = 0x18
+    const val FLAG_PRESENT = 0x19
+    const val STRX = 0x1a
+    const val ADDRX = 0x1b
+    const val REF_SUP4 = 0x1c
+    const val STRP_SUP = 0x1d
+    const val DATA16 = 0x1e
+    const val LINE_STRP = 0x1f
+    const val REF_SIG8 = 0x20
+    const val IMPLICIT_CONST = 0x21
+    const val LOCLISTX = 0x22
+    const val RNGLISTX = 0x23
+    const val REF_SUP8 = 0x24
+    const val STRX1 = 0x25
+    const val STRX2 = 0x26
+    const val STRX3 = 0x27
+    const val STRX4 = 0x28
+    const val ADDRX1 = 0x29
+    const val ADDRX2 = 0x2a
+    const val ADDRX3 = 0x2b
+    const val ADDRX4 = 0x2c
+    const val RNGLISTX1 = 0x2d
+    // GNU 扩展（真实二进制常见）
+    const val GNU_REF_ALT = 0x1f20
+    const val GNU_STRP_ALT = 0x1f21
+    const val GNU_ADDRX = 0x1f30
+}
+
+object DwAt {
+    const val NAME = 0x03
+    const val STMT_LIST = 0x10
+    const val LOW_PC = 0x11
+    const val HIGH_PC = 0x12
+    const val COMP_DIR = 0x1b
+    const val ABSTRACT_ORIGIN = 0x31
+    const val CALL_FILE = 0x58
+    const val CALL_LINE = 0x59
+    const val CALL_COLUMN = 0x57
+    const val RANGES = 0x55
+    const val SPECIFICATION = 0x47
+    const val DW_AT_SIBLING = 0x01
+    const val DW_AT_TYPE = 0x49
+    const val EXTERNAL = 0x3f
+    const val DECL_FILE = 0x3a
+    const val DECL_LINE = 0x3b
+    const val DECL_COLUMN = 0x39
+    const val PROTOTYPED = 0x27
+    const val ENTRY_PC = 0x52
+    const val ARTIFICIAL = 0x34
+    // DWARF5
+    const val DWO_NAME = 0x76
+    const val DWO_ID = 0x2032
+    const val STR_OFFSETS_BASE = 0x72
+    const val ADDR_BASE = 0x73
+    const val RNGLISTS_BASE = 0x74
+    // GNU
+    const val GNU_DWO_NAME = 0x2130
+    const val GNU_DWO_ID = 0x2134
+    // 解析器自定义优先级（测试夹具可显式指定，值为普通用户属性空间 0x3e80 起）
+    const val RESOLVE_PRIORITY = 0x3e80
+}
+
+object DwLns {
+    const val COPY = 1
+    const val ADVANCE_PC = 2
+    const val LINE = 3
+    const val FILE = 4
+    const val SET_COLUMN = 5
+    const val NEGATE_STMT = 6
+    const val SET_BASIC_BLOCK = 7
+    const val CONST_ADD_PC = 8
+    const val FIXED_ADVANCE_PC = 9
+    const val SET_PROLOGUE_END = 10
+    const val SET_ISA = 11
+    // DWARF5 扩展
+    const val MAX_STEPS_OP = 12
+}
+
+object DwLne {
+    const val END_SEQUENCE = 1
+    const val SET_ADDRESS = 2
+    const val DEFINE_FILE = 3
+    const val SET_DISCRIMINATOR = 4
+    // DWARF5
+    const val SET_FILE = 5
+    const val SET_IS_STMT6 = 6
+}
+
+/** DWARF5 rnglists entry kind。 */
+object DwRle {
+    const val END_OF_LIST = 0
+    const val BASE_ADDRESSX = 1
+    const val STARTX_ENDX = 2
+    const val STARTX_LENGTH = 3
+    const val OFFSET_PAIR = 4
+    const val BASE_ADDRESS = 5
+    const val START_END = 6
+    const val START_LENGTH = 7
+}
